@@ -1,4 +1,5 @@
-import { Client, Events, GatewayIntentBits } from 'discord.js';
+import { Client, Events } from 'discord.js';
+import { Intents } from './gatewayIntentBits';
 import config from './config';
 
 export class DiscordBot {
@@ -7,11 +8,7 @@ export class DiscordBot {
 
   private constructor() {
     this.client = new Client({
-      intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-      ],
+      intents: Intents,
     });
 
     this.client.once(Events.ClientReady, async (readyClient) => {
