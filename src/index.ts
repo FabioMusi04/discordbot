@@ -1,10 +1,13 @@
-import { Client, Events } from 'discord.js';
+import { Client, Events, TextChannel } from 'discord.js';
 import { Intents } from './gatewayIntentBits';
+import { TicketManager } from './tickets/class';
+
 import config from './config';
 
 export class DiscordBot {
   private static instance: DiscordBot;
   private client: Client;
+  private ticketManager: TicketManager | null = null;
 
   private constructor() {
     this.client = new Client({
@@ -12,7 +15,28 @@ export class DiscordBot {
     });
 
     this.client.once(Events.ClientReady, async (readyClient) => {
+      this.ticketManager = new TicketManager(config.ticketCategoryId);
       console.log(`Logged in as ${readyClient.user?.tag}`);
+    });
+
+    this.client.on(Events.InteractionCreate, async (interaction) => {
+      if (!this.ticketManager) return;
+
+      if (interaction.isButton() && interaction.customId === "close_ticket") {
+        if (interaction.channel?.isTextBased()) {
+          await this.ticketManager.closeTicket(interaction);
+        }
+      }
+
+      if (interaction.isButton() && interaction.customId === 'claim_ticket') {
+        if (interaction.channel?.isTextBased()) {
+          await this.ticketManager.claimTicket(interaction);
+        }
+      }
+
+      if (interaction.isChatInputCommand() && interaction.commandName === 'ticket') {
+        await this.ticketManager.createTicket(interaction);
+      } 
     });
   }
 

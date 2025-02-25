@@ -22,11 +22,21 @@ if (process.env.NODE_ENV !== 'production') {
 
 interface Config {
   discordToken: string;
+  ticketCategoryId: string;
+  discordClientId: string;
+  guildId: string;
+  discordRoleSupportId: string;
+  logsChannelId: string;
   env: string;
 }
 
 const config: Config = {
   discordToken: requireProcessEnv('DISCORD_TOKEN'),
+  ticketCategoryId: requireProcessEnv('TICKET_CATEGORY_ID'),
+  discordClientId: requireProcessEnv('DISCORD_CLIENT_ID'),
+  guildId: requireProcessEnv('GUILD_ID'),
+  discordRoleSupportId: requireProcessEnv('DISCORD_SUPPORT_ROLE_ID'),
+  logsChannelId: requireProcessEnv('DISCORD_LOGS_CHANNEL_ID'),
   env: process.env.NODE_ENV || 'development'
 };
 
