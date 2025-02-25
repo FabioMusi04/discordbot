@@ -24,13 +24,19 @@ export class DiscordBot {
 
       if (interaction.isButton() && interaction.customId === "close_ticket") {
         if (interaction.channel?.isTextBased()) {
-          await this.ticketManager.closeTicket(interaction.channel as TextChannel);
+          await this.ticketManager.closeTicket(interaction);
+        }
+      }
+
+      if (interaction.isButton() && interaction.customId === 'claim_ticket') {
+        if (interaction.channel?.isTextBased()) {
+          await this.ticketManager.claimTicket(interaction);
         }
       }
 
       if (interaction.isChatInputCommand() && interaction.commandName === 'ticket') {
         await this.ticketManager.createTicket(interaction);
-      }
+      } 
     });
   }
 
