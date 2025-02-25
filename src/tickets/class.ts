@@ -20,8 +20,8 @@ import config from '../config';
 
 export class TicketManager {
   private ticketCategoryId: string;
-  private activeTickets: Collection<string, string> = new Collection(); // userId -> channelId
-  private claimedTickets: Collection<string, string> = new Collection(); // channelId -> userId
+  private activeTickets: Collection<string, string> = new Collection();
+  private claimedTickets: Collection<string, string> = new Collection();
 
   constructor(ticketCategoryId: string) {
     this.ticketCategoryId = ticketCategoryId;
