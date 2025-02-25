@@ -1,4 +1,5 @@
 import { TextChannel, CategoryChannel, PermissionFlagsBits, ButtonBuilder, ButtonStyle, ActionRowBuilder, EmbedBuilder, ChatInputCommandInteraction } from 'discord.js';
+import config from '../config';
 
 export class TicketManager {
   private ticketCategoryId: string; 
@@ -30,7 +31,7 @@ export class TicketManager {
           allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
         },
         {
-          id: 'SUPPORT_ROLE_ID',
+          id: config.discordRoleSupportId,
           allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
         }
       ],

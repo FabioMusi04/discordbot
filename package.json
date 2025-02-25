@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx --env-file=.env src/index.ts"
+    "dev": "tsx --env-file=.env src/index.ts",
+    "sync-commands": "tsx --env-file=.env src/commands/index.ts"
   },
   "keywords": [],
   "author": "",
