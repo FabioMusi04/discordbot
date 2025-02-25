@@ -13,9 +13,10 @@ import {
   type Interaction,
   Collection
 } from 'discord.js';
-import config from '../config';
 import { createTranscript } from 'discord-html-transcripts';
 import { createClaimedEmbed, createClosedEmbed, createTicketEmbed, fetchTicketMessage } from './utils';
+
+import config from '../config';
 
 export class TicketManager {
   private ticketCategoryId: string;
@@ -133,7 +134,7 @@ export class TicketManager {
     const channel = interaction.channel as TextChannel;
     if (!channel) return;
 
-    const logsChannel = interaction.guild?.channels.cache.get(config.logsChannelId) as TextChannel;
+    const logsChannel = interaction.guild?.channels.cache.get(config.ticketsLogsChannelId) as TextChannel;
     if (logsChannel) {
       await interaction.reply({ content: 'Closing ticket...', ephemeral: true });
       const generatingMsg = await logsChannel.send('Generating transcript...');

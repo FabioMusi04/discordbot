@@ -1,6 +1,7 @@
 import { Client, Events, TextChannel } from 'discord.js';
 import { Intents } from './gatewayIntentBits';
 import { TicketManager } from './tickets/class';
+import { MembershipManager } from './membership/class';
 
 import config from './config';
 
@@ -8,6 +9,7 @@ export class DiscordBot {
   private static instance: DiscordBot;
   private client: Client;
   private ticketManager: TicketManager | null = null;
+  private membershipManager: MembershipManager | null = null;
 
   private constructor() {
     this.client = new Client({
@@ -16,6 +18,7 @@ export class DiscordBot {
 
     this.client.once(Events.ClientReady, async (readyClient) => {
       this.ticketManager = new TicketManager(config.ticketCategoryId);
+      this.membershipManager = new MembershipManager();
       console.log(`Logged in as ${readyClient.user?.tag}`);
     });
 
@@ -36,7 +39,15 @@ export class DiscordBot {
 
       if (interaction.isChatInputCommand() && interaction.commandName === 'ticket') {
         await this.ticketManager.createTicket(interaction);
-      } 
+      }
+
+      if (interaction.isChatInputCommand() && interaction.commandName === 'm-membership') {
+        await this.membershipManager?.assignMembership(interaction);
+      }
+
+      if (interaction.isChatInputCommand() && interaction.commandName === 'm-unmembership') {
+        await this.membershipManager?.removeMembership(interaction);
+      }
     });
   }
 
