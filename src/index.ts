@@ -1,4 +1,4 @@
-import { Client, Events } from 'discord.js';
+import { Client, Events, TextChannel } from 'discord.js';
 import { Intents } from './gatewayIntentBits';
 import { TicketManager } from './tickets/class';
 
@@ -21,9 +21,14 @@ export class DiscordBot {
 
     this.client.on(Events.InteractionCreate, async (interaction) => {
       if (!this.ticketManager) return;
-      if (!interaction.isChatInputCommand()) return;
 
-      if (interaction.commandName === 'ticket') {
+      if (interaction.isButton() && interaction.customId === "close_ticket") {
+        if (interaction.channel?.isTextBased()) {
+          await this.ticketManager.closeTicket(interaction.channel as TextChannel);
+        }
+      }
+
+      if (interaction.isChatInputCommand() && interaction.commandName === 'ticket') {
         await this.ticketManager.createTicket(interaction);
       }
     });
