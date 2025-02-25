@@ -22,11 +22,13 @@ if (process.env.NODE_ENV !== 'production') {
 
 interface Config {
   discordToken: string;
+  ticketCategoryId: string;
   env: string;
 }
 
 const config: Config = {
   discordToken: requireProcessEnv('DISCORD_TOKEN'),
+  ticketCategoryId: requireProcessEnv('TICKET_CATEGORY_ID'),
   env: process.env.NODE_ENV || 'development'
 };
 
