@@ -1,3 +1,5 @@
+import { createTranscript } from 'discord-html-transcripts';
+import { createClaimedEmbed, createClosedEmbed, createTicketEmbed, fetchTicketMessage } from './utils';
 import {
   TextChannel,
   CategoryChannel,
@@ -13,8 +15,6 @@ import {
   type Interaction,
   Collection
 } from 'discord.js';
-import { createTranscript } from 'discord-html-transcripts';
-import { createClaimedEmbed, createClosedEmbed, createTicketEmbed, fetchTicketMessage } from './utils';
 
 import config from '../config';
 

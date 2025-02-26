@@ -1,4 +1,5 @@
 import { EmbedBuilder, type Client, type Guild, type TextChannel } from 'discord.js';
+
 import fs from 'fs';
 import config from '../../config';
 

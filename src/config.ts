@@ -1,5 +1,6 @@
-import path from 'path';
 import { fileURLToPath } from 'url';
+
+import path from 'path';
 import dotenv from 'dotenv-safe';
 
 const __filename = fileURLToPath(import.meta.url);

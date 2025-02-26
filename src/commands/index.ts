@@ -1,6 +1,7 @@
 import { REST, Routes } from "discord.js";
 import { ticketCommands } from "../tickets/commands";
 import { membershipCommands } from "../membership/commands";
+
 import config from "../config";
 
 const commands = [ticketCommands.toJSON(), ...membershipCommands.map((c) => c.toJSON())];

@@ -1,4 +1,4 @@
-import { Client, Events, TextChannel } from 'discord.js';
+import { Client, Events, ButtonInteraction, ChatInputCommandInteraction, type Interaction } from 'discord.js';
 import { Intents } from './gatewayIntentBits';
 import { TicketManager } from './tickets/class';
 import { MembershipManager } from './membership/class';
@@ -13,46 +13,57 @@ export class DiscordBot {
   private membershipManager: MembershipManager | null = null;
 
   private constructor() {
-    this.client = new Client({
-      intents: Intents,
-    });
+    this.client = new Client({ intents: Intents });
+    this.setupEventListeners();
+  }
 
-    this.client.once(Events.ClientReady, async (readyClient) => {
-      await checkExpiredRoles(readyClient);
+  private setupEventListeners(): void {
+    this.client.once(Events.ClientReady, this.handleReady.bind(this));
+    this.client.on(Events.InteractionCreate, this.handleInteraction.bind(this));
+  }
 
-      this.ticketManager = new TicketManager(config.ticketCategoryId);
-      this.membershipManager = new MembershipManager(this.client);
-      
-      console.log(`Logged in as ${readyClient.user?.tag}`);
-    });
+  private async handleReady(readyClient: Client): Promise<void> {
+    await checkExpiredRoles(readyClient);
+    this.ticketManager = new TicketManager(config.ticketCategoryId);
+    this.membershipManager = new MembershipManager(this.client);
+    console.log(`Logged in as ${readyClient.user?.tag}`);
+  }
 
-    this.client.on(Events.InteractionCreate, async (interaction) => {
-      if (!this.ticketManager) return;
+  private async handleInteraction(interaction: Interaction): Promise<void> {
+    if (!this.ticketManager) return;
 
-      if (interaction.isButton() && interaction.customId === "close_ticket") {
-        if (interaction.channel?.isTextBased()) {
-          await this.ticketManager.closeTicket(interaction);
-        }
-      }
+    if (interaction.isButton()) {
+      await this.handleButtonInteraction(interaction);
+    } else if (interaction.isChatInputCommand()) {
+      await this.handleCommand(interaction);
+    }
+  }
 
-      if (interaction.isButton() && interaction.customId === 'claim_ticket') {
-        if (interaction.channel?.isTextBased()) {
-          await this.ticketManager.claimTicket(interaction);
-        }
-      }
+  private async handleButtonInteraction(interaction: ButtonInteraction): Promise<void> {
+    if (!interaction.channel?.isTextBased()) return;
 
-      if (interaction.isChatInputCommand() && interaction.commandName === 'ticket') {
-        await this.ticketManager.createTicket(interaction);
-      }
+    switch (interaction.customId) {
+      case 'close_ticket':
+        await this.ticketManager?.closeTicket(interaction);
+        break;
+      case 'claim_ticket':
+        await this.ticketManager?.claimTicket(interaction);
+        break;
+    }
+  }
 
-      if (interaction.isChatInputCommand() && interaction.commandName === 'm-membership') {
+  private async handleCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+    switch (interaction.commandName) {
+      case 'ticket':
+        await this.ticketManager?.createTicket(interaction);
+        break;
+      case 'm-membership':
         await this.membershipManager?.assignMembership(interaction);
-      }
-
-      if (interaction.isChatInputCommand() && interaction.commandName === 'm-unmembership') {
+        break;
+      case 'm-unmembership':
         await this.membershipManager?.removeMembership(interaction);
-      }
-    });
+        break;
+    }
   }
 
   public static getInstance(): DiscordBot {
