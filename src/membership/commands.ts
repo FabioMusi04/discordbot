@@ -21,7 +21,7 @@ const addMembershipCommand = new SlashCommandBuilder()
 
 const removeMembershipCommand = new SlashCommandBuilder()
   .setName("m-unmembership")
-  .setDescription("Remove a user's Tester role.")
+  .setDescription("Remove a role from a user.")
   .addUserOption(option =>
     option.setName('user')
       .setDescription('The user to remove the role from')

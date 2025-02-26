@@ -1,12 +1,96 @@
-import { ChatInputCommandInteraction, GuildMember, Role, EmbedBuilder, TextChannel } from 'discord.js';
-import { parseDuration } from './utils';
+import { ChatInputCommandInteraction, GuildMember, Role, Client, EmbedBuilder, TextChannel } from 'discord.js';
+import { loadMemberships, saveMemberships, parseDuration, removeRole } from './utils';
 import config from '../config';
 
 export class MembershipManager {
-  private logChannelId: string = config.membershipsLogsChannelId;
+  constructor(private client: Client) {
+    this.setupExpiredRoleChecks();
+  }
 
-  constructor() { }
+  /**
+   * Schedules role removals on bot startup.
+   */
+  private setupExpiredRoleChecks() {
+    const memberships = loadMemberships();
+    const now = Date.now();
 
+    memberships.forEach((membership) => {
+      if (membership.expiresAt && membership.expiresAt > now) {
+        const guild = this.client.guilds.cache.get(membership.guildId);
+        if (!guild) return;
+
+        const delay = membership.expiresAt - now;
+        console.log(`Scheduling role removal for ${membership.userId} in ${delay}ms`);
+
+        setTimeout(() => removeRole(guild, membership.userId, membership.roleId), delay);
+      }
+    });
+  }
+
+  /**
+   * Assigns a role to a user with an optional expiration.
+   */
+  public async assignMembership(interaction: ChatInputCommandInteraction) {
+    const targetUser = interaction.options.getMember('user') as GuildMember;
+    const role = interaction.options.getRole('role') as Role;
+    const duration = interaction.options.getString('duration');
+
+    if (!targetUser || !role || !duration) {
+      return interaction.reply({ content: 'Invalid user, role, or duration.', ephemeral: true });
+    }
+
+    if (targetUser.roles.cache.has(role.id)) {
+      return interaction.reply({ content: `${targetUser} already has this role.`, ephemeral: true });
+    }
+
+    try {
+      await targetUser.roles.add(role);
+      this.logMembershipChange(interaction, targetUser, role, 'added', duration, true);
+      interaction.reply({ content: 'Role assigned successfully.', ephemeral: true });
+
+      if (duration.toLowerCase() !== 'perm') {
+        const timeMs = parseDuration(duration);
+        if (!timeMs) return interaction.reply({ content: 'Invalid duration format.', ephemeral: true });
+
+        const expiresAt = Date.now() + timeMs;
+        const memberships = loadMemberships();
+        memberships.push({ userId: targetUser.id, guildId: targetUser.guild.id, expiresAt, roleId: role.id });
+        saveMemberships(memberships);
+
+        console.log(`Scheduling role removal for ${targetUser.id} in ${timeMs}ms`);
+        setTimeout(() => removeRole(interaction.guild!, targetUser.id, role.id), timeMs);
+      }
+    } catch (error) {
+      this.logMembershipChange(interaction, targetUser, role, 'added', duration, false, 'Failed to assign the role.');
+      await interaction.reply({ content: 'Failed to assign the role.', ephemeral: true });
+    }
+  }
+
+  /**
+   * Manually removes a role from a user.
+   */
+  public async removeMembership(interaction: ChatInputCommandInteraction) {
+    const targetUser = interaction.options.getMember('user') as GuildMember;
+    const role = interaction.options.getRole('role') as Role;
+
+    if (!targetUser || !role) {
+      return interaction.reply({ content: 'Invalid user or role.', ephemeral: true });
+    }
+
+    if (!targetUser.roles.cache.has(role.id)) {
+      return interaction.reply({ content: `${targetUser} does not have this role.`, ephemeral: true });
+    }
+
+    await removeRole(interaction.guild!, targetUser.id, role.id, false);
+    this.logMembershipChange(interaction, targetUser, role, 'removed');
+
+    interaction.reply({ content: 'Role removed successfully.', ephemeral: true });
+  }
+
+
+  /**
+   * Logs a membership change to a channel.
+   */
   private async logMembershipChange(
     interaction: ChatInputCommandInteraction,
     targetUser: GuildMember,
@@ -16,7 +100,7 @@ export class MembershipManager {
     success: boolean = true,
     errorMessage?: string
   ) {
-    const logChannel = interaction.guild?.channels.cache.get(this.logChannelId) as TextChannel;
+    const logChannel = interaction.guild?.channels.cache.get(config.membershipsLogsChannelId) as TextChannel;
     if (!logChannel) return;
 
     const embed = new EmbedBuilder()
@@ -40,80 +124,5 @@ export class MembershipManager {
     }
 
     await logChannel.send({ embeds: [embed] });
-  }
-
-  public async assignMembership(interaction: ChatInputCommandInteraction) {
-    const targetUser = interaction.options.getMember('user') as GuildMember;
-    const duration = interaction.options.getString('duration');
-    const role = interaction.options.getRole('role') as Role;
-
-    if (!targetUser || !role || !duration) {
-      return interaction.reply({ content: 'Invalid user or role or duration', ephemeral: true });
-    }
-
-    if (targetUser.roles.cache.has(role.id)) {
-      await this.logMembershipChange(interaction, targetUser, role, 'added', duration, false, 'User already has this role');
-      return interaction.reply({ content: `${targetUser} already has the ${role.name} role.`, ephemeral: true });
-    }
-
-    if (duration && duration.toLowerCase() !== 'perm') {
-      const timeMs = parseDuration(duration);
-      if (!timeMs) {
-        return interaction.reply({ content: 'Invalid duration format. Use h (hours), d (days), or m (minutes).', ephemeral: true });
-      }
-    }
-
-    try {
-      await targetUser.roles.add(role);
-      await interaction.reply({ content: `${targetUser} has been given the ${role.name} role.`, ephemeral: false });
-      await this.logMembershipChange(interaction, targetUser, role, 'added', duration);
-
-      if (duration && duration.toLowerCase() !== 'perm') {
-        const timeMs = parseDuration(duration);
-        if (!timeMs) {
-          return interaction.reply({ content: 'Invalid duration format. Use h (hours), d (days), or m (minutes).', ephemeral: true });
-        }
-
-        setTimeout(async () => {
-          try {
-            await targetUser.roles.remove(role);
-            if (interaction.channel) {
-              await interaction.followUp(`${targetUser}'s ${role.name} role has been removed.`);
-              await this.logMembershipChange(interaction, targetUser, role, 'removed', undefined, true);
-            }
-          } catch (error) {
-            await this.logMembershipChange(interaction, targetUser, role, 'removed', undefined, false, 'Failed to remove role automatically');
-          }
-        }, timeMs);
-      } else {
-        return interaction.followUp({ content: 'Invalid duration format. Use h (hours), d (days), or m (minutes).', ephemeral: true });
-      }
-    } catch (error) {
-      await this.logMembershipChange(interaction, targetUser, role, 'added', duration, false, 'Failed to add role');
-      await interaction.reply({ content: 'Failed to assign the role.', ephemeral: true });
-    }
-  }
-
-  public async removeMembership(interaction: ChatInputCommandInteraction) {
-    const targetUser = interaction.options.getMember('user') as GuildMember;
-    const role = interaction.options.getRole('role') as Role;
-
-    if (!targetUser || !role) {
-      return interaction.reply({ content: 'Invalid user or role.', ephemeral: true });
-    }
-
-    if (!targetUser.roles.cache.has(role.id)) {
-      await this.logMembershipChange(interaction, targetUser, role, 'removed', undefined, false, "User doesn't have this role");
-      return interaction.reply({ content: `${targetUser} doesn't have the ${role.name} role.`, ephemeral: true });
-    }
-
-    try {
-      await targetUser.roles.remove(role);
-      await interaction.reply({ content: `${role.name} role has been removed from ${targetUser}.`, ephemeral: false });
-      await this.logMembershipChange(interaction, targetUser, role, 'removed');
-    } catch (error) {
-      await this.logMembershipChange(interaction, targetUser, role, 'removed', undefined, false, 'Failed to remove role');
-      await interaction.reply({ content: 'Failed to remove the role.', ephemeral: true });
-    }
   }
 }

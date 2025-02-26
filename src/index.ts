@@ -2,6 +2,7 @@ import { Client, Events, TextChannel } from 'discord.js';
 import { Intents } from './gatewayIntentBits';
 import { TicketManager } from './tickets/class';
 import { MembershipManager } from './membership/class';
+import { checkExpiredRoles } from './membership/utils';
 
 import config from './config';
 
@@ -17,8 +18,11 @@ export class DiscordBot {
     });
 
     this.client.once(Events.ClientReady, async (readyClient) => {
+      await checkExpiredRoles(readyClient);
+
       this.ticketManager = new TicketManager(config.ticketCategoryId);
-      this.membershipManager = new MembershipManager();
+      this.membershipManager = new MembershipManager(this.client);
+      
       console.log(`Logged in as ${readyClient.user?.tag}`);
     });
 
