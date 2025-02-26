@@ -26,9 +26,11 @@ interface Config {
   ticketCategoryId: string;
   discordClientId: string;
   guildId: string;
-  discordRoleSupportId: string;
+  discordStaffRoleId: string;
   ticketsLogsChannelId: string;
   membershipsLogsChannelId: string;
+  discordSeniorStaffRoleId: string;
+  discordFounderRoleId: string;
   env: string;
 }
 
@@ -37,9 +39,11 @@ const config: Config = {
   ticketCategoryId: requireProcessEnv('TICKET_CATEGORY_ID'),
   discordClientId: requireProcessEnv('DISCORD_CLIENT_ID'),
   guildId: requireProcessEnv('GUILD_ID'),
-  discordRoleSupportId: requireProcessEnv('DISCORD_SUPPORT_ROLE_ID'),
+  discordStaffRoleId: requireProcessEnv('DISCORD_SUPPORT_ROLE_ID'),
   ticketsLogsChannelId: requireProcessEnv('DISCORD_TICKETS_LOGS_CHANNEL_ID'),
   membershipsLogsChannelId: requireProcessEnv('DISCORD_MEMBERSHIPS_LOGS_CHANNEL_ID'),
+  discordSeniorStaffRoleId: requireProcessEnv('DISCORD_SENIOR_STAFF_ROLE_ID'),
+  discordFounderRoleId: requireProcessEnv('DISCORD_FOUNDER_ROLE_ID'),
   env: process.env.NODE_ENV || 'development'
 };
 

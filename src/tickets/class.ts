@@ -1,5 +1,5 @@
 import { createTranscript } from 'discord-html-transcripts';
-import { createClaimedEmbed, createClosedEmbed, createTicketEmbed, fetchTicketMessage } from './utils';
+import { createClaimedEmbed, createClosedEmbed, createTicketEmbed, fetchTicketMessage, loadTicketsFromJson, saveTicketsToJson } from './utils';
 import {
   TextChannel,
   CategoryChannel,
@@ -13,10 +13,12 @@ import {
   TextInputBuilder,
   TextInputStyle,
   type Interaction,
-  Collection
+  Collection,
+  ButtonInteraction
 } from 'discord.js';
 
 import config from '../config';
+
 
 export class TicketManager {
   private ticketCategoryId: string;
@@ -25,6 +27,12 @@ export class TicketManager {
 
   constructor(ticketCategoryId: string) {
     this.ticketCategoryId = ticketCategoryId;
+
+    const { activeTickets, claimedTickets } = loadTicketsFromJson() ||
+      { activeTickets: new Collection<string, string>(), claimedTickets: new Collection<string, string>() };
+
+    this.activeTickets = activeTickets;
+    this.claimedTickets = claimedTickets;
   }
 
   public async createTicket(interaction: ChatInputCommandInteraction) {
@@ -97,7 +105,7 @@ export class TicketManager {
             allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles],
           },
           {
-            id: config.discordRoleSupportId,
+            id: config.discordStaffRoleId,
             allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles],
           }
         ],
@@ -105,19 +113,16 @@ export class TicketManager {
 
       this.activeTickets.set(interaction.user.id, ticketChannel.id);
 
-      const embed = createTicketEmbed(reason, robloxUsername, description);
+      saveTicketsToJson(this.activeTickets, this.claimedTickets);
 
-      const closeButton = new ButtonBuilder()
-        .setCustomId("close_ticket")
-        .setLabel("Close Ticket")
-        .setStyle(ButtonStyle.Danger);
+      const embed = createTicketEmbed(reason, robloxUsername, description);
 
       const claimButton = new ButtonBuilder()
         .setCustomId("claim_ticket")
         .setLabel("Claim Ticket")
         .setStyle(ButtonStyle.Primary);
 
-      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(claimButton, closeButton);
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(claimButton);
 
       await ticketChannel.send({ content: `<@${interaction.user.id}>`, embeds: [embed], components: [row] });
 
@@ -133,6 +138,15 @@ export class TicketManager {
 
     const channel = interaction.channel as TextChannel;
     if (!channel) return;
+
+    const channelClaimerId = this.claimedTickets.get(channel.id);
+    if (!channelClaimerId) {
+      return interaction.reply({ content: "You cannot close a ticket that you haven't claimed.", ephemeral: true });
+    }
+
+    if (channelClaimerId !== interaction.user.id) {
+      return interaction.reply({ content: "You cannot close a ticket that you haven't claimed.", ephemeral: true });
+    }
 
     const logsChannel = interaction.guild?.channels.cache.get(config.ticketsLogsChannelId) as TextChannel;
     if (logsChannel) {
@@ -170,8 +184,21 @@ export class TicketManager {
       }
     });
 
+    this.claimedTickets.forEach((userId, channelId) => {
+      if (channelId === channel.id) {
+        this.claimedTickets.delete(channelId);
+      }
+    });
+
+    saveTicketsToJson(this.activeTickets, this.claimedTickets);
+
     await interaction.editReply({ content: 'Ticket will be closed in 5 seconds...' });
-    setTimeout(() => channel.delete(), 5000);
+    setTimeout(async () => {
+      const channelExists = interaction.guild?.channels.cache.has(channel.id);
+      if (channelExists) {
+        await channel.delete();
+      }
+    }, 5000);
   }
 
   public async claimTicket(interaction: Interaction) {
@@ -180,25 +207,105 @@ export class TicketManager {
     const channel = interaction.channel as TextChannel;
     if (!channel) return;
 
-    if (this.claimedTickets.has(channel.id)) {
-      return interaction.reply({ content: "This ticket has already been claimed!", ephemeral: true });
+    const existingClaimerId = this.claimedTickets.get(interaction.user.id);
+
+    if (existingClaimerId && existingClaimerId !== interaction.user.id) {
+      return interaction.reply({ content: "This ticket has already been claimed by someone else.", ephemeral: true });
     }
 
-    this.claimedTickets.set(channel.id, interaction.user.id);
-
-    const ticketMessage = await fetchTicketMessage(channel);
-
-    if (ticketMessage && ticketMessage.embeds[0]) {
-      const updatedEmbed = EmbedBuilder.from(ticketMessage.embeds[0])
-        .setFooter({ text: `Claimed by: ${interaction.user.tag}` })
-        .setColor("Yellow");
-
-      await ticketMessage.edit({ embeds: [updatedEmbed] });
+    if (existingClaimerId === channel.id) {
+      await this.askMoreSupport(interaction, channel);
+      return;
     }
 
-    const embed = createClaimedEmbed(interaction.user.tag);
-    await channel.send({ embeds: [embed] });
-    await interaction.reply({ content: "You have claimed this ticket", ephemeral: true });
+    if (!existingClaimerId) {
+      this.claimedTickets.set(channel.id, interaction.user.id);
+      saveTicketsToJson(this.activeTickets, this.claimedTickets);
+
+      await channel.setName(`${channel.name}-c`);
+
+      const ticketMessage = await fetchTicketMessage(channel);
+      if (ticketMessage && ticketMessage.embeds[0]) {
+        const updatedEmbed = EmbedBuilder.from(ticketMessage.embeds[0])
+          .setFooter({ text: `Claimed by: ${interaction.user.tag}` })
+          .setColor("Yellow");
+
+        const message = await ticketMessage.edit({
+          embeds: [updatedEmbed],
+          components: [this.createTicketButtons(true, false)]
+        });
+        message.pin();
+      }
+
+      const embed = createClaimedEmbed(interaction.user.tag);
+      const message = await channel.send({ embeds: [embed] });
+      message.pin();
+
+      await interaction.reply({ content: "You have claimed this ticket.", ephemeral: true });
+      return;
+    }
+
+    await interaction.reply({
+      content: "This ticket has already been claimed by someone else.",
+      ephemeral: true
+    });
   }
 
+  private async askMoreSupport(interaction: ButtonInteraction, channel: TextChannel) {
+    const guild = interaction.guild;
+    if (!guild) return;
+
+    const foundersRole = guild.roles.cache.get(config.discordFounderRoleId);
+    const seniorHelps = guild.roles.cache.get(config.discordSeniorStaffRoleId);
+    const staffRole = guild.roles.cache.get(config.discordStaffRoleId);
+
+    if (foundersRole && seniorHelps && staffRole) {
+      await channel.permissionOverwrites.edit(staffRole, {
+        ViewChannel: false
+      });
+
+      await channel.send({
+        content: `Attention ${foundersRole} ${seniorHelps}, this ticket requires your attention.`,
+      });
+    }
+
+    const ticketMessage = await fetchTicketMessage(channel);
+    if (ticketMessage && ticketMessage.embeds[0]) {
+      const updatedEmbed = EmbedBuilder.from(ticketMessage.embeds[0])
+        .setFooter({ text: `Claimed by: ${interaction.user.tag} | Waiting for more support.` })
+        .setColor("Blue");
+
+      const message = await ticketMessage.edit({
+        embeds: [updatedEmbed],
+        components: [this.createTicketButtons(true, true)]
+      });
+      message.pin();
+    }
+
+    await interaction.reply({
+      content: "You have requested more support. Founders and senior staff have been notified.",
+      ephemeral: true
+    });
+  }
+
+  private createTicketButtons(isClaimed: boolean, alreadyAskedSupport: boolean): ActionRowBuilder<ButtonBuilder> {
+    const row = new ActionRowBuilder<ButtonBuilder>()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId('claim_ticket')
+          .setLabel(isClaimed ? 'Ask More Support' : 'Claim Ticket')
+          .setStyle(isClaimed ? ButtonStyle.Secondary : ButtonStyle.Primary)
+          .setDisabled(alreadyAskedSupport)
+      );
+
+    if (isClaimed) {
+      row.addComponents(
+        new ButtonBuilder()
+          .setCustomId('close_ticket')
+          .setLabel('Close Ticket')
+          .setStyle(ButtonStyle.Danger)
+      );
+    }
+    return row;
+  }
 }
