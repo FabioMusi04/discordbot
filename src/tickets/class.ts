@@ -207,13 +207,13 @@ export class TicketManager {
     const channel = interaction.channel as TextChannel;
     if (!channel) return;
 
-    const existingClaimerId = this.claimedTickets.get(interaction.user.id);
+    const existingClaimerId = this.claimedTickets.get(channel.id);
 
     if (existingClaimerId && existingClaimerId !== interaction.user.id) {
       return interaction.reply({ content: "This ticket has already been claimed by someone else.", ephemeral: true });
     }
 
-    if (existingClaimerId === channel.id) {
+    if (existingClaimerId && existingClaimerId === interaction.user.id) {
       await this.askMoreSupport(interaction, channel);
       return;
     }
