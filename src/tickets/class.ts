@@ -1,5 +1,5 @@
 import { createTranscript } from 'discord-html-transcripts';
-import { createClaimedEmbed, createClosedEmbed, createTicketEmbed, fetchTicketMessage, loadTicketsFromJson, saveTicketsToJson } from './utils';
+import { createClaimedEmbed, createClosedEmbed, createTicketEmbed, fetchTicketMessage, loadTicketsFromJson, saveTicketsToJson } from './utils/index.ts';
 import {
   TextChannel,
   CategoryChannel,
@@ -17,7 +17,7 @@ import {
   ButtonInteraction
 } from 'discord.js';
 
-import config from '../config';
+import config from '../config.ts';
 
 
 export class TicketManager {

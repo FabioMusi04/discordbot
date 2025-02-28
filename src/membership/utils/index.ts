@@ -1,7 +1,7 @@
 import { EmbedBuilder, type Client, type Guild, type TextChannel } from 'discord.js';
 
 import fs from 'fs';
-import config from '../../config';
+import config from '../../config.ts';
 
 const MEMBERSHIP_FILE = 'memberships.json';
 

@@ -1,10 +1,10 @@
 import { Client, Events, ButtonInteraction, ChatInputCommandInteraction, type Interaction } from 'discord.js';
-import { Intents } from './gatewayIntentBits';
-import { TicketManager } from './tickets/class';
-import { MembershipManager } from './membership/class';
-import { checkExpiredRoles } from './membership/utils';
+import { Intents } from './gatewayIntentBits/index.ts';
+import { TicketManager } from './tickets/class.ts';
+import { MembershipManager } from './membership/class.ts';
+import { checkExpiredRoles } from './membership/utils/index.ts';
 
-import config from './config';
+import config from './config.ts';
 
 export class DiscordBot {
   private static instance: DiscordBot;

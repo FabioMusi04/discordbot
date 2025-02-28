@@ -1,7 +1,7 @@
 import { ChatInputCommandInteraction, GuildMember, Role, Client, EmbedBuilder, TextChannel } from 'discord.js';
-import { loadMemberships, saveMemberships, parseDuration, removeRole } from './utils';
+import { loadMemberships, saveMemberships, parseDuration, removeRole } from './utils/index.ts';
 
-import config from '../config';
+import config from '../config.ts';
 
 export class MembershipManager {
   constructor(private client: Client) {

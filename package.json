@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx --env-file=.env src/index.ts",
+    "dev": "nodemon src/index.ts",
     "sync-commands": "tsx --env-file=.env src/commands/index.ts"
   },
   "keywords": [],
@@ -16,10 +16,11 @@
     "@types/dotenv-safe": "^8.1.6",
     "discord-html-transcripts": "^3.2.0",
     "discord.js": "^14.18.0",
-    "dotenv-safe": "^9.1.0",
-    "tsx": "^4.19.3"
+    "dotenv-safe": "^9.1.0"
   },
   "devDependencies": {
+    "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   }
 }
