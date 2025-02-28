@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/index.ts",
-    "sync-commands": "tsx --env-file=.env src/commands/index.ts"
+    "sync-commands": "node --loader ts-node/esm src/commands/index.ts"
   },
   "keywords": [],
   "author": "",
