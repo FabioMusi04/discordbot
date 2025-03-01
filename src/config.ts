@@ -1,3 +1,5 @@
+import process from 'node:process';
+
 const requireProcessEnv = (name: string): string => {
   if (!process.env[name]) {
     throw new Error('You must set the ' + name + ' environment variable');
