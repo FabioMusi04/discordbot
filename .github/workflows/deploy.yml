@@ -35,7 +35,7 @@ jobs:
         uses: denoland/deployctl@v1
         with:
           project: "fabiomusi04-discordbot-39"
-          entrypoint: "./src"
-          root: "."
+          entrypoint: "/src/index.ts"
+          root: ""
           
           
