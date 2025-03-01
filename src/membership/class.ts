@@ -93,11 +93,11 @@ export class MembershipManager {
 
         const expiresAt = Date.now() + timeMs;
         const memberships = await loadMemberships();
-        memberships.push({
+        memberships.set(`${targetUser.id}-${role.id}`, {
+          guildId: interaction.guild!.id,
           userId: targetUser.id,
-          guildId: targetUser.guild.id,
-          expiresAt,
           roleId: role.id,
+          expiresAt,
         });
         await saveMemberships(memberships);
 

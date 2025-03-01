@@ -1,8 +1,5 @@
 import { Collection, EmbedBuilder, TextChannel } from 'discord.js';
-
-import * as fs from 'node:fs';
-
-const TICKETS_FILE = 'tickets.json';
+import DataBase from '../../db/index.ts';
 
 export function createTicketEmbed(
   reason: string,
@@ -44,36 +41,34 @@ export async function fetchTicketMessage(channel: TextChannel) {
   );
 }
 
-export async function saveTicketsToJson(
+export async function saveTicketsToKv(
   activeTickets: Collection<string, string>,
   claimedTickets: Collection<string, string>,
 ) {
-  const data = {
-    activeTickets: Object.fromEntries(activeTickets),
-    claimedTickets: Object.fromEntries(claimedTickets),
-  };
-
-  await Deno.writeTextFile(TICKETS_FILE, JSON.stringify(data));
+  const kv = await DataBase.getInstance();
+  await kv.set(['activeTickets'], activeTickets);
+  await kv.set(['claimedTickets'], claimedTickets);
 }
 
-export async function loadTicketsFromJson(): Promise<
-  {
-    activeTickets: Collection<string, string>;
-    claimedTickets: Collection<string, string>;
-  } | undefined
-> {
-  if (!fs.existsSync(TICKETS_FILE)) return;
+export async function loadTicketsFromKv() {
+  const kv = await DataBase.getInstance();
+  const activeTicketsData = await kv.get(['activeTickets']);
+  const claimedTicketsData = await kv.get(['claimedTickets']);
 
-  try {
-    const data = JSON.parse(await Deno.readTextFile(TICKETS_FILE));
-    const activeTickets = new Collection<string, string>(
-      Object.entries(data.activeTickets || {}),
-    );
-    const claimedTickets = new Collection<string, string>(
-      Object.entries(data.claimedTickets || {}),
-    );
-    return { activeTickets, claimedTickets };
-  } catch (error) {
-    console.error('Error loading tickets from JSON:', error);
+  const activeTickets = new Collection<string, string>();
+  const claimedTickets = new Collection<string, string>();
+
+  if (activeTicketsData) {
+    Object.entries(activeTicketsData).forEach(([key, value]) => {
+      activeTickets.set(key, value as string);
+    });
   }
+
+  if (claimedTicketsData) {
+    Object.entries(claimedTicketsData).forEach(([key, value]) => {
+      claimedTickets.set(key, value as string);
+    });
+  }
+
+  return { activeTickets, claimedTickets };
 }

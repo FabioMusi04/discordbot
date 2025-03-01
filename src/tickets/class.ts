@@ -4,8 +4,8 @@ import {
   createClosedEmbed,
   createTicketEmbed,
   fetchTicketMessage,
-  loadTicketsFromJson,
-  saveTicketsToJson,
+  loadTicketsFromKv,
+  saveTicketsToKv,
 } from './utils/index.ts';
 import {
   ActionRowBuilder,
@@ -37,14 +37,13 @@ export class TicketManager {
   }
 
   private async initialize() {
-    const { activeTickets, claimedTickets } = await loadTicketsFromJson() ||
-      {
-        activeTickets: new Collection<string, string>(),
-        claimedTickets: new Collection<string, string>(),
-      };
-
-    this.activeTickets = activeTickets;
-    this.claimedTickets = claimedTickets;
+    const { activeTickets, claimedTickets } = await loadTicketsFromKv();
+    if (activeTickets) {
+      this.activeTickets = activeTickets;
+    }
+    if (claimedTickets) {
+      this.claimedTickets = claimedTickets;
+    }
   }
 
   public async createTicket(interaction: ChatInputCommandInteraction) {
@@ -149,7 +148,7 @@ export class TicketManager {
 
       this.activeTickets.set(interaction.user.id, ticketChannel.id);
 
-      await saveTicketsToJson(this.activeTickets, this.claimedTickets);
+      await saveTicketsToKv(this.activeTickets, this.claimedTickets);
 
       const embed = createTicketEmbed(reason, robloxUsername, description);
 
@@ -250,7 +249,7 @@ export class TicketManager {
       }
     });
 
-    await saveTicketsToJson(this.activeTickets, this.claimedTickets);
+    await saveTicketsToKv(this.activeTickets, this.claimedTickets);
 
     await interaction.editReply({
       content: 'Ticket will be closed in 5 seconds...',
@@ -285,7 +284,7 @@ export class TicketManager {
 
     if (!existingClaimerId) {
       this.claimedTickets.set(channel.id, interaction.user.id);
-      await saveTicketsToJson(this.activeTickets, this.claimedTickets);
+      await saveTicketsToKv(this.activeTickets, this.claimedTickets);
 
       await channel.setName(`${channel.name}-c`);
 

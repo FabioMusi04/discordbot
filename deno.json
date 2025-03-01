@@ -1,11 +1,11 @@
 {
   "tasks": {
-    "dev": "deno run --watch --env-file --allow-env --allow-net --allow-read --allow-write src/index.ts",
+    "dev": "deno run --watch --env-file --allow-env --allow-net --allow-read --unstable-kv --allow-write src/index.ts",
     "check": "deno check src/index.ts",
     "lint": "deno lint --fix",
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
-    "start": "deno run --env --allow-env --allow-read --allow-write src/index.ts"
+    "start": "deno run --allow-env --allow-read --allow-write --unstable-kv src/index.ts"
   },
   "lint": {
     "include": ["src/"],

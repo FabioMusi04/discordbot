@@ -1,14 +1,13 @@
 import {
   type Client,
+  Collection,
   EmbedBuilder,
   type Guild,
   type TextChannel,
 } from 'discord.js';
 
-import * as fs from 'node:fs';
+import DataBase from '../../db/index.ts';
 import config from '../../config.ts';
-
-const MEMBERSHIP_FILE = 'memberships.json';
 
 export interface Membership {
   userId: string;
@@ -42,18 +41,35 @@ export function parseDuration(duration: string): number | null {
 /**
  * Loads stored memberships from file.
  */
-export async function loadMemberships(): Promise<Membership[]> {
-  if (!fs.existsSync(MEMBERSHIP_FILE)) return [];
-  return JSON.parse(await Deno.readTextFile(MEMBERSHIP_FILE));
+export async function loadMemberships(): Promise<
+  Collection<string, Membership>
+> {
+  const kv = await DataBase.getInstance();
+  await kv.delete(['memberships']);
+
+  const membershipsData = await kv.get(['memberships']);
+  const memberships = new Collection<string, Membership>();
+
+  if (!membershipsData) return memberships;
+
+  if (!membershipsData.value) return memberships;
+
+  Object.values(membershipsData).forEach(([key, value]) => {
+    memberships.set(key, value as Membership);
+  });
+
+  return memberships || [];
 }
 
 /**
  * Saves memberships to file.
  */
 export async function saveMemberships(
-  memberships: Membership[],
-): Promise<void> {
-  await Deno.writeTextFile(MEMBERSHIP_FILE, JSON.stringify(memberships));
+  memberships: Collection<string, Membership>,
+) {
+  const kv = await DataBase.getInstance();
+  await kv.set(['memberships'], memberships);
+  console.log(await kv.get(['memberships']));
 }
 
 /**
@@ -119,10 +135,14 @@ export async function removeRole(
 
     hasToLog && logRoleChange(guild, userId, roleId, 'removed', true);
 
-    const memberships = (await loadMemberships()).filter((m) =>
-      !(m.userId === userId && m.roleId === roleId)
+    const memberships = ((await loadMemberships()).values()).filter((m) => {
+      console.log(m);
+      return !(m.userId === userId && m.roleId === roleId);
+    });
+    console.log('Removing role:', memberships);
+    await saveMemberships(
+      new Collection(memberships.map((m) => [m.userId, m])),
     );
-    saveMemberships(memberships);
   } catch (error) {
     console.error(`Error removing role ${roleId} from ${userId}:`, error);
     hasToLog &&
@@ -141,10 +161,14 @@ export async function removeRole(
  * Checks expired roles and removes them when needed.
  */
 export async function checkExpiredRoles(client: Client): Promise<void> {
+  await saveMemberships(new Collection<string, Membership>());
   const memberships = await loadMemberships();
+  console.log('Checking expired roles:', memberships.size);
+  if (!memberships.size || memberships.size <= 1) return;
   const now = Date.now();
-
-  for (const membership of memberships) {
+  console.log(memberships);
+  for (const membership of memberships.values()) {
+    console.log('Checking membership:', membership);
     if (membership.expiresAt && membership.expiresAt < now) {
       const guild = client.guilds.cache.get(membership.guildId);
       if (guild) await removeRole(guild, membership.userId, membership.roleId);
