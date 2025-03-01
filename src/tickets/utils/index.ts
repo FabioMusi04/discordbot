@@ -1,6 +1,6 @@
 import { Collection, EmbedBuilder, TextChannel } from 'discord.js';
 
-import fs from 'fs';
+import * as fs from 'node:fs';
 
 const TICKETS_FILE = 'tickets.json';
 
