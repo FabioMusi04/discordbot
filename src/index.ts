@@ -1,7 +1,5 @@
 import syncCommands from './commands/index.ts';
 
-await syncCommands();
-
 import {
   ButtonInteraction,
   ChatInputCommandInteraction,
@@ -33,6 +31,7 @@ export class DiscordBot {
   }
 
   private async handleReady(readyClient: Client): Promise<void> {
+    await syncCommands();
     await checkExpiredRoles(readyClient);
     this.ticketManager = new TicketManager(config.ticketCategoryId);
     this.membershipManager = new MembershipManager(this.client);

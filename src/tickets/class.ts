@@ -1,9 +1,13 @@
-import { createTranscript } from 'discord-html-transcripts';
 import {
+  askMoreSupport,
   createClaimedEmbed,
-  createClosedEmbed,
+  createTicketButtons,
+  createTicketChannel,
   createTicketEmbed,
+  createTicketModal,
   fetchTicketMessage,
+  getModalValues,
+  handleTicketClosure,
   loadTicketsFromKv,
   saveTicketsToKv,
 } from './utils/index.ts';
@@ -16,12 +20,8 @@ import {
   ChatInputCommandInteraction,
   Collection,
   EmbedBuilder,
-  type Interaction,
-  ModalBuilder,
-  PermissionFlagsBits,
+  Interaction,
   TextChannel,
-  TextInputBuilder,
-  TextInputStyle,
 } from 'discord.js';
 
 import config from '../config.ts';
@@ -38,12 +38,8 @@ export class TicketManager {
 
   private async initialize() {
     const { activeTickets, claimedTickets } = await loadTicketsFromKv();
-    if (activeTickets) {
-      this.activeTickets = activeTickets;
-    }
-    if (claimedTickets) {
-      this.claimedTickets = claimedTickets;
-    }
+    if (activeTickets) this.activeTickets = activeTickets;
+    if (claimedTickets) this.claimedTickets = claimedTickets;
   }
 
   public async createTicket(interaction: ChatInputCommandInteraction) {
@@ -54,40 +50,7 @@ export class TicketManager {
       });
     }
 
-    const modal = new ModalBuilder()
-      .setCustomId('ticket_modal')
-      .setTitle('Create a Ticket');
-
-    const reasonInput = new TextInputBuilder()
-      .setCustomId('ticket_reason')
-      .setLabel('Reason for ticket')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true);
-
-    const robloxInput = new TextInputBuilder()
-      .setCustomId('roblox_username')
-      .setLabel('Roblox Username')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true);
-
-    const descriptionInput = new TextInputBuilder()
-      .setCustomId('ticket_description')
-      .setLabel('Additional Information')
-      .setStyle(TextInputStyle.Paragraph)
-      .setRequired(false);
-
-    const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
-      reasonInput,
-    );
-    const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
-      robloxInput,
-    );
-    const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
-      descriptionInput,
-    );
-
-    modal.addComponents(firstRow, secondRow, thirdRow);
-
+    const modal = createTicketModal();
     await interaction.showModal(modal);
 
     try {
@@ -97,12 +60,8 @@ export class TicketManager {
           i.customId === 'ticket_modal' && i.user.id === interaction.user.id,
       });
 
-      const reason = modalSubmission.fields.getTextInputValue('ticket_reason');
-      const robloxUsername = modalSubmission.fields.getTextInputValue(
-        'roblox_username',
-      );
-      const description = modalSubmission.fields.getTextInputValue(
-        'ticket_description',
+      const { reason, robloxUsername, description } = getModalValues(
+        modalSubmission,
       );
 
       const guild = interaction.guild;
@@ -118,40 +77,16 @@ export class TicketManager {
         });
       }
 
-      const ticketChannel = await guild.channels.create({
-        name: `ticket-${interaction.user.username}`,
-        type: 0,
-        parent: category.id,
-        permissionOverwrites: [
-          {
-            id: guild.id,
-            deny: [PermissionFlagsBits.ViewChannel],
-          },
-          {
-            id: interaction.user.id,
-            allow: [
-              PermissionFlagsBits.ViewChannel,
-              PermissionFlagsBits.SendMessages,
-              PermissionFlagsBits.AttachFiles,
-            ],
-          },
-          {
-            id: config.discordStaffRoleId,
-            allow: [
-              PermissionFlagsBits.ViewChannel,
-              PermissionFlagsBits.SendMessages,
-              PermissionFlagsBits.AttachFiles,
-            ],
-          },
-        ],
-      });
+      const ticketChannel = await createTicketChannel(
+        guild,
+        interaction.user,
+        category,
+      );
 
       this.activeTickets.set(interaction.user.id, ticketChannel.id);
-
       await saveTicketsToKv(this.activeTickets, this.claimedTickets);
 
       const embed = createTicketEmbed(reason, robloxUsername, description);
-
       const claimButton = new ButtonBuilder()
         .setCustomId('claim_ticket')
         .setLabel('Claim Ticket')
@@ -180,21 +115,14 @@ export class TicketManager {
     }
   }
 
-  public async closeTicket(interaction: Interaction) {
+  public async closeTicket(interaction: ButtonInteraction) {
     if (!interaction.isButton()) return;
 
     const channel = interaction.channel as TextChannel;
     if (!channel) return;
 
     const channelClaimerId = this.claimedTickets.get(channel.id);
-    if (!channelClaimerId) {
-      return interaction.reply({
-        content: "You cannot close a ticket that you haven't claimed.",
-        ephemeral: true,
-      });
-    }
-
-    if (channelClaimerId !== interaction.user.id) {
+    if (!channelClaimerId || channelClaimerId !== interaction.user.id) {
       return interaction.reply({
         content: "You cannot close a ticket that you haven't claimed.",
         ephemeral: true,
@@ -205,49 +133,10 @@ export class TicketManager {
       config.ticketsLogsChannelId,
     ) as TextChannel;
     if (logsChannel) {
-      await interaction.reply({
-        content: 'Closing ticket...',
-        ephemeral: true,
-      });
-      const generatingMsg = await logsChannel.send('Generating transcript...');
-
-      const transcript = await createTranscript(channel as any, {
-        limit: -1,
-        filename: `transcript-${channel.name}.html`,
-      });
-
-      const msg = await logsChannel.send({ files: [transcript] });
-
-      const button = new ActionRowBuilder<ButtonBuilder>()
-        .addComponents(
-          new ButtonBuilder()
-            .setLabel('Open Transcript')
-            .setURL(
-              `https://mahto.id/chat-exporter?url=${msg.attachments.first()?.url}`,
-            )
-            .setStyle(ButtonStyle.Link),
-          new ButtonBuilder()
-            .setLabel('Download Transcript')
-            .setURL(`${msg.attachments.first()?.url}`)
-            .setStyle(ButtonStyle.Link),
-        );
-
-      const embed = createClosedEmbed(channel.name, interaction.user.tag);
-      await generatingMsg.delete();
-      await logsChannel.send({ embeds: [embed], components: [button] });
+      await handleTicketClosure(interaction, channel, logsChannel);
     }
 
-    this.activeTickets.forEach((channelId, userId) => {
-      if (channelId === channel.id) {
-        this.activeTickets.delete(userId);
-      }
-    });
-
-    this.claimedTickets.forEach((_userId, channelId) => {
-      if (channelId === channel.id) {
-        this.claimedTickets.delete(channelId);
-      }
-    });
+    this.removeTicketFromCollections(channel.id);
 
     await saveTicketsToKv(this.activeTickets, this.claimedTickets);
 
@@ -260,6 +149,20 @@ export class TicketManager {
         await channel.delete();
       }
     }, 5000);
+  }
+
+  private removeTicketFromCollections(channelId: string) {
+    this.activeTickets.forEach((id, userId) => {
+      if (id === channelId) {
+        this.activeTickets.delete(userId);
+      }
+    });
+
+    this.claimedTickets.forEach((_userId, id) => {
+      if (id === channelId) {
+        this.claimedTickets.delete(channelId);
+      }
+    });
   }
 
   public async claimTicket(interaction: Interaction) {
@@ -278,112 +181,44 @@ export class TicketManager {
     }
 
     if (existingClaimerId && existingClaimerId === interaction.user.id) {
-      await this.askMoreSupport(interaction, channel);
+      await askMoreSupport(interaction as ButtonInteraction, channel);
       return;
     }
 
     if (!existingClaimerId) {
-      this.claimedTickets.set(channel.id, interaction.user.id);
-      await saveTicketsToKv(this.activeTickets, this.claimedTickets);
-
-      await channel.setName(`${channel.name}-c`);
-
-      const ticketMessage = await fetchTicketMessage(channel);
-      if (ticketMessage && ticketMessage.embeds[0]) {
-        const updatedEmbed = EmbedBuilder.from(ticketMessage.embeds[0])
-          .setFooter({ text: `Claimed by: ${interaction.user.tag}` })
-          .setColor('Yellow');
-
-        const message = await ticketMessage.edit({
-          embeds: [updatedEmbed],
-          components: [this.createTicketButtons(true, false)],
-        });
-        message.pin();
-      }
-
-      const embed = createClaimedEmbed(interaction.user.tag);
-      const message = await channel.send({ embeds: [embed] });
-      message.pin();
-
-      await interaction.reply({
-        content: 'You have claimed this ticket.',
-        ephemeral: true,
-      });
-      return;
+      await this.handleTicketClaim(interaction, channel);
     }
-
-    await interaction.reply({
-      content: 'This ticket has already been claimed by someone else.',
-      ephemeral: true,
-    });
   }
 
-  private async askMoreSupport(
+  private async handleTicketClaim(
     interaction: ButtonInteraction,
     channel: TextChannel,
   ) {
-    const guild = interaction.guild;
-    if (!guild) return;
+    this.claimedTickets.set(channel.id, interaction.user.id);
+    await saveTicketsToKv(this.activeTickets, this.claimedTickets);
 
-    const foundersRole = guild.roles.cache.get(config.discordFounderRoleId);
-    const seniorHelps = guild.roles.cache.get(config.discordSeniorStaffRoleId);
-    const staffRole = guild.roles.cache.get(config.discordStaffRoleId);
-
-    if (foundersRole && seniorHelps && staffRole) {
-      await channel.permissionOverwrites.edit(staffRole, {
-        ViewChannel: false,
-      });
-
-      await channel.send({
-        content:
-          `Attention ${foundersRole} ${seniorHelps}, this ticket requires your attention.`,
-      });
-    }
+    await channel.setName(`${channel.name}-c`);
 
     const ticketMessage = await fetchTicketMessage(channel);
     if (ticketMessage && ticketMessage.embeds[0]) {
       const updatedEmbed = EmbedBuilder.from(ticketMessage.embeds[0])
-        .setFooter({
-          text:
-            `Claimed by: ${interaction.user.tag} | Waiting for more support.`,
-        })
-        .setColor('Blue');
+        .setFooter({ text: `Claimed by: ${interaction.user.tag}` })
+        .setColor('Yellow');
 
       const message = await ticketMessage.edit({
         embeds: [updatedEmbed],
-        components: [this.createTicketButtons(true, true)],
+        components: [createTicketButtons(true, false)],
       });
       message.pin();
     }
 
+    const embed = createClaimedEmbed(interaction.user.tag);
+    const message = await channel.send({ embeds: [embed] });
+    message.pin();
+
     await interaction.reply({
-      content:
-        'You have requested more support. Founders and senior staff have been notified.',
+      content: 'You have claimed this ticket.',
       ephemeral: true,
     });
-  }
-
-  private createTicketButtons(
-    isClaimed: boolean,
-    alreadyAskedSupport: boolean,
-  ): ActionRowBuilder<ButtonBuilder> {
-    const row = new ActionRowBuilder<ButtonBuilder>()
-      .addComponents(
-        new ButtonBuilder()
-          .setCustomId('claim_ticket')
-          .setLabel(isClaimed ? 'Ask More Support' : 'Claim Ticket')
-          .setStyle(isClaimed ? ButtonStyle.Secondary : ButtonStyle.Primary)
-          .setDisabled(alreadyAskedSupport),
-      );
-
-    if (isClaimed) {
-      row.addComponents(
-        new ButtonBuilder()
-          .setCustomId('close_ticket')
-          .setLabel('Close Ticket')
-          .setStyle(ButtonStyle.Danger),
-      );
-    }
-    return row;
   }
 }
