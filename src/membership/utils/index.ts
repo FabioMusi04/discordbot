@@ -1,4 +1,9 @@
-import { EmbedBuilder, type Client, type Guild, type TextChannel } from 'discord.js';
+import {
+  type Client,
+  EmbedBuilder,
+  type Guild,
+  type TextChannel,
+} from 'discord.js';
 
 import * as fs from 'node:fs';
 import config from '../../config.ts';
@@ -16,7 +21,7 @@ export interface Membership {
  * Parses a duration string and converts it to milliseconds.
  */
 export function parseDuration(duration: string): number | null {
-  if (duration.toLowerCase() === "perm") return null;
+  if (duration.toLowerCase() === 'perm') return null;
 
   const match = duration.match(/(\d+)([hmds])/);
   if (!match || !match[1] || !match[2]) return null;
@@ -25,10 +30,10 @@ export function parseDuration(duration: string): number | null {
   const unit = match[2];
 
   const unitMs: { [key: string]: number } = {
-    h: 60 * 60 * 1000,  // 1 hour
+    h: 60 * 60 * 1000, // 1 hour
     d: 24 * 60 * 60 * 1000, // 1 day
-    m: 60 * 1000,  // 1 minute
-    s: 1000,  // 1 second
+    m: 60 * 1000, // 1 minute
+    s: 1000, // 1 second
   };
 
   return unitMs[unit] ? value * unitMs[unit] : null;
@@ -58,9 +63,11 @@ export async function logRoleChange(
   roleId: string,
   action: 'added' | 'removed',
   success: boolean,
-  errorMessage?: string
+  errorMessage?: string,
 ) {
-  const logChannel = guild.channels.cache.get(config.membershipsLogsChannelId) as TextChannel;
+  const logChannel = guild.channels.cache.get(
+    config.membershipsLogsChannelId,
+  ) as TextChannel;
   if (!logChannel) return;
 
   const user = await guild.members.fetch(userId);
@@ -69,13 +76,17 @@ export async function logRoleChange(
   if (!user || !role) return;
 
   const embed = new EmbedBuilder()
-    .setColor(success ? (action === 'added' ? '#00ff00' : '#ff0000') : '#ff6b6b')
-    .setTitle(`Membership Role ${action.charAt(0).toUpperCase() + action.slice(1)}`)
+    .setColor(
+      success ? (action === 'added' ? '#00ff00' : '#ff0000') : '#ff6b6b',
+    )
+    .setTitle(
+      `Membership Role ${action.charAt(0).toUpperCase() + action.slice(1)}`,
+    )
     .setThumbnail(user.user.displayAvatarURL())
     .addFields(
       { name: 'User', value: `${user} (${user.user.tag})`, inline: true },
       { name: 'Role', value: role.name, inline: true },
-      { name: 'Status', value: success ? 'Success' : 'Failed', inline: true }
+      { name: 'Status', value: success ? 'Success' : 'Failed', inline: true },
     )
     .setTimestamp();
 
@@ -89,7 +100,12 @@ export async function logRoleChange(
 /**
  * Removes a role from a user and logs the action.
  */
-export async function removeRole(guild: Guild, userId: string, roleId: string, hasToLog: boolean = true): Promise<void> {
+export async function removeRole(
+  guild: Guild,
+  userId: string,
+  roleId: string,
+  hasToLog: boolean = true,
+): Promise<void> {
   try {
     const user = await guild.members.fetch(userId);
     if (!user) return;
@@ -101,11 +117,21 @@ export async function removeRole(guild: Guild, userId: string, roleId: string, h
 
     hasToLog && logRoleChange(guild, userId, roleId, 'removed', true);
 
-    const memberships = loadMemberships().filter(m => !(m.userId === userId && m.roleId === roleId));
+    const memberships = loadMemberships().filter((m) =>
+      !(m.userId === userId && m.roleId === roleId)
+    );
     saveMemberships(memberships);
   } catch (error) {
     console.error(`Error removing role ${roleId} from ${userId}:`, error);
-    hasToLog && logRoleChange(guild, userId, roleId, 'removed', false, 'Error removing role.');
+    hasToLog &&
+      logRoleChange(
+        guild,
+        userId,
+        roleId,
+        'removed',
+        false,
+        'Error removing role.',
+      );
   }
 }
 

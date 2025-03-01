@@ -1,24 +1,30 @@
 import { createTranscript } from 'discord-html-transcripts';
-import { createClaimedEmbed, createClosedEmbed, createTicketEmbed, fetchTicketMessage, loadTicketsFromJson, saveTicketsToJson } from './utils/index.ts';
 import {
-  TextChannel,
-  CategoryChannel,
-  PermissionFlagsBits,
-  ButtonBuilder,
-  ButtonStyle,
+  createClaimedEmbed,
+  createClosedEmbed,
+  createTicketEmbed,
+  fetchTicketMessage,
+  loadTicketsFromJson,
+  saveTicketsToJson,
+} from './utils/index.ts';
+import {
   ActionRowBuilder,
-  EmbedBuilder,
+  ButtonBuilder,
+  ButtonInteraction,
+  ButtonStyle,
+  CategoryChannel,
   ChatInputCommandInteraction,
+  Collection,
+  EmbedBuilder,
+  type Interaction,
   ModalBuilder,
+  PermissionFlagsBits,
+  TextChannel,
   TextInputBuilder,
   TextInputStyle,
-  type Interaction,
-  Collection,
-  ButtonInteraction
 } from 'discord.js';
 
 import config from '../config.ts';
-
 
 export class TicketManager {
   private ticketCategoryId: string;
@@ -29,7 +35,10 @@ export class TicketManager {
     this.ticketCategoryId = ticketCategoryId;
 
     const { activeTickets, claimedTickets } = loadTicketsFromJson() ||
-      { activeTickets: new Collection<string, string>(), claimedTickets: new Collection<string, string>() };
+      {
+        activeTickets: new Collection<string, string>(),
+        claimedTickets: new Collection<string, string>(),
+      };
 
     this.activeTickets = activeTickets;
     this.claimedTickets = claimedTickets;
@@ -38,8 +47,8 @@ export class TicketManager {
   public async createTicket(interaction: ChatInputCommandInteraction) {
     if (this.activeTickets.has(interaction.user.id)) {
       return interaction.reply({
-        content: "You already have an active ticket!",
-        ephemeral: true
+        content: 'You already have an active ticket!',
+        ephemeral: true,
       });
     }
 
@@ -65,9 +74,15 @@ export class TicketManager {
       .setStyle(TextInputStyle.Paragraph)
       .setRequired(false);
 
-    const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonInput);
-    const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(robloxInput);
-    const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(descriptionInput);
+    const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
+      reasonInput,
+    );
+    const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
+      robloxInput,
+    );
+    const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
+      descriptionInput,
+    );
 
     modal.addComponents(firstRow, secondRow, thirdRow);
 
@@ -76,19 +91,29 @@ export class TicketManager {
     try {
       const modalSubmission = await interaction.awaitModalSubmit({
         time: 300000,
-        filter: i => i.customId === 'ticket_modal' && i.user.id === interaction.user.id,
+        filter: (i) =>
+          i.customId === 'ticket_modal' && i.user.id === interaction.user.id,
       });
 
       const reason = modalSubmission.fields.getTextInputValue('ticket_reason');
-      const robloxUsername = modalSubmission.fields.getTextInputValue('roblox_username');
-      const description = modalSubmission.fields.getTextInputValue('ticket_description');
+      const robloxUsername = modalSubmission.fields.getTextInputValue(
+        'roblox_username',
+      );
+      const description = modalSubmission.fields.getTextInputValue(
+        'ticket_description',
+      );
 
       const guild = interaction.guild;
       if (!guild) return;
 
-      const category = guild.channels.cache.get(this.ticketCategoryId) as CategoryChannel;
+      const category = guild.channels.cache.get(
+        this.ticketCategoryId,
+      ) as CategoryChannel;
       if (!category) {
-        return modalSubmission.reply({ content: "Ticket category not found.", ephemeral: true });
+        return modalSubmission.reply({
+          content: 'Ticket category not found.',
+          ephemeral: true,
+        });
       }
 
       const ticketChannel = await guild.channels.create({
@@ -102,12 +127,20 @@ export class TicketManager {
           },
           {
             id: interaction.user.id,
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles],
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.AttachFiles,
+            ],
           },
           {
             id: config.discordStaffRoleId,
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles],
-          }
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.AttachFiles,
+            ],
+          },
         ],
       });
 
@@ -118,18 +151,30 @@ export class TicketManager {
       const embed = createTicketEmbed(reason, robloxUsername, description);
 
       const claimButton = new ButtonBuilder()
-        .setCustomId("claim_ticket")
-        .setLabel("Claim Ticket")
+        .setCustomId('claim_ticket')
+        .setLabel('Claim Ticket')
         .setStyle(ButtonStyle.Primary);
 
-      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(claimButton);
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        claimButton,
+      );
 
-      await ticketChannel.send({ content: `<@${interaction.user.id}>`, embeds: [embed], components: [row] });
+      await ticketChannel.send({
+        content: `<@${interaction.user.id}>`,
+        embeds: [embed],
+        components: [row],
+      });
 
-      await modalSubmission.reply({ content: `Your ticket has been created: ${ticketChannel}`, ephemeral: true });
+      await modalSubmission.reply({
+        content: `Your ticket has been created: ${ticketChannel}`,
+        ephemeral: true,
+      });
     } catch (error) {
       console.error('Error handling modal submission:', error);
-      await interaction.followUp({ content: 'Failed to create ticket. Please try again.', ephemeral: true });
+      await interaction.followUp({
+        content: 'Failed to create ticket. Please try again.',
+        ephemeral: true,
+      });
     }
   }
 
@@ -141,16 +186,27 @@ export class TicketManager {
 
     const channelClaimerId = this.claimedTickets.get(channel.id);
     if (!channelClaimerId) {
-      return interaction.reply({ content: "You cannot close a ticket that you haven't claimed.", ephemeral: true });
+      return interaction.reply({
+        content: "You cannot close a ticket that you haven't claimed.",
+        ephemeral: true,
+      });
     }
 
     if (channelClaimerId !== interaction.user.id) {
-      return interaction.reply({ content: "You cannot close a ticket that you haven't claimed.", ephemeral: true });
+      return interaction.reply({
+        content: "You cannot close a ticket that you haven't claimed.",
+        ephemeral: true,
+      });
     }
 
-    const logsChannel = interaction.guild?.channels.cache.get(config.ticketsLogsChannelId) as TextChannel;
+    const logsChannel = interaction.guild?.channels.cache.get(
+      config.ticketsLogsChannelId,
+    ) as TextChannel;
     if (logsChannel) {
-      await interaction.reply({ content: 'Closing ticket...', ephemeral: true });
+      await interaction.reply({
+        content: 'Closing ticket...',
+        ephemeral: true,
+      });
       const generatingMsg = await logsChannel.send('Generating transcript...');
 
       const transcript = await createTranscript(channel, {
@@ -163,14 +219,15 @@ export class TicketManager {
       const button = new ActionRowBuilder<ButtonBuilder>()
         .addComponents(
           new ButtonBuilder()
-            .setLabel("Open Transcript")
-            .setURL(`https://mahto.id/chat-exporter?url=${msg.attachments.first()?.url}`)
+            .setLabel('Open Transcript')
+            .setURL(
+              `https://mahto.id/chat-exporter?url=${msg.attachments.first()?.url}`,
+            )
             .setStyle(ButtonStyle.Link),
-
           new ButtonBuilder()
-            .setLabel("Download Transcript")
+            .setLabel('Download Transcript')
             .setURL(`${msg.attachments.first()?.url}`)
-            .setStyle(ButtonStyle.Link)
+            .setStyle(ButtonStyle.Link),
         );
 
       const embed = createClosedEmbed(channel.name, interaction.user.tag);
@@ -192,7 +249,9 @@ export class TicketManager {
 
     saveTicketsToJson(this.activeTickets, this.claimedTickets);
 
-    await interaction.editReply({ content: 'Ticket will be closed in 5 seconds...' });
+    await interaction.editReply({
+      content: 'Ticket will be closed in 5 seconds...',
+    });
     setTimeout(async () => {
       const channelExists = interaction.guild?.channels.cache.has(channel.id);
       if (channelExists) {
@@ -210,7 +269,10 @@ export class TicketManager {
     const existingClaimerId = this.claimedTickets.get(channel.id);
 
     if (existingClaimerId && existingClaimerId !== interaction.user.id) {
-      return interaction.reply({ content: "This ticket has already been claimed by someone else.", ephemeral: true });
+      return interaction.reply({
+        content: 'This ticket has already been claimed by someone else.',
+        ephemeral: true,
+      });
     }
 
     if (existingClaimerId && existingClaimerId === interaction.user.id) {
@@ -228,11 +290,11 @@ export class TicketManager {
       if (ticketMessage && ticketMessage.embeds[0]) {
         const updatedEmbed = EmbedBuilder.from(ticketMessage.embeds[0])
           .setFooter({ text: `Claimed by: ${interaction.user.tag}` })
-          .setColor("Yellow");
+          .setColor('Yellow');
 
         const message = await ticketMessage.edit({
           embeds: [updatedEmbed],
-          components: [this.createTicketButtons(true, false)]
+          components: [this.createTicketButtons(true, false)],
         });
         message.pin();
       }
@@ -241,17 +303,23 @@ export class TicketManager {
       const message = await channel.send({ embeds: [embed] });
       message.pin();
 
-      await interaction.reply({ content: "You have claimed this ticket.", ephemeral: true });
+      await interaction.reply({
+        content: 'You have claimed this ticket.',
+        ephemeral: true,
+      });
       return;
     }
 
     await interaction.reply({
-      content: "This ticket has already been claimed by someone else.",
-      ephemeral: true
+      content: 'This ticket has already been claimed by someone else.',
+      ephemeral: true,
     });
   }
 
-  private async askMoreSupport(interaction: ButtonInteraction, channel: TextChannel) {
+  private async askMoreSupport(
+    interaction: ButtonInteraction,
+    channel: TextChannel,
+  ) {
     const guild = interaction.guild;
     if (!guild) return;
 
@@ -261,41 +329,49 @@ export class TicketManager {
 
     if (foundersRole && seniorHelps && staffRole) {
       await channel.permissionOverwrites.edit(staffRole, {
-        ViewChannel: false
+        ViewChannel: false,
       });
 
       await channel.send({
-        content: `Attention ${foundersRole} ${seniorHelps}, this ticket requires your attention.`,
+        content:
+          `Attention ${foundersRole} ${seniorHelps}, this ticket requires your attention.`,
       });
     }
 
     const ticketMessage = await fetchTicketMessage(channel);
     if (ticketMessage && ticketMessage.embeds[0]) {
       const updatedEmbed = EmbedBuilder.from(ticketMessage.embeds[0])
-        .setFooter({ text: `Claimed by: ${interaction.user.tag} | Waiting for more support.` })
-        .setColor("Blue");
+        .setFooter({
+          text:
+            `Claimed by: ${interaction.user.tag} | Waiting for more support.`,
+        })
+        .setColor('Blue');
 
       const message = await ticketMessage.edit({
         embeds: [updatedEmbed],
-        components: [this.createTicketButtons(true, true)]
+        components: [this.createTicketButtons(true, true)],
       });
       message.pin();
     }
 
     await interaction.reply({
-      content: "You have requested more support. Founders and senior staff have been notified.",
-      ephemeral: true
+      content:
+        'You have requested more support. Founders and senior staff have been notified.',
+      ephemeral: true,
     });
   }
 
-  private createTicketButtons(isClaimed: boolean, alreadyAskedSupport: boolean): ActionRowBuilder<ButtonBuilder> {
+  private createTicketButtons(
+    isClaimed: boolean,
+    alreadyAskedSupport: boolean,
+  ): ActionRowBuilder<ButtonBuilder> {
     const row = new ActionRowBuilder<ButtonBuilder>()
       .addComponents(
         new ButtonBuilder()
           .setCustomId('claim_ticket')
           .setLabel(isClaimed ? 'Ask More Support' : 'Claim Ticket')
           .setStyle(isClaimed ? ButtonStyle.Secondary : ButtonStyle.Primary)
-          .setDisabled(alreadyAskedSupport)
+          .setDisabled(alreadyAskedSupport),
       );
 
     if (isClaimed) {
@@ -303,7 +379,7 @@ export class TicketManager {
         new ButtonBuilder()
           .setCustomId('close_ticket')
           .setLabel('Close Ticket')
-          .setStyle(ButtonStyle.Danger)
+          .setStyle(ButtonStyle.Danger),
       );
     }
     return row;

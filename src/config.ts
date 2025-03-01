@@ -27,10 +27,12 @@ const config: Config = {
   guildId: requireProcessEnv('GUILD_ID'),
   discordStaffRoleId: requireProcessEnv('DISCORD_SUPPORT_ROLE_ID'),
   ticketsLogsChannelId: requireProcessEnv('DISCORD_TICKETS_LOGS_CHANNEL_ID'),
-  membershipsLogsChannelId: requireProcessEnv('DISCORD_MEMBERSHIPS_LOGS_CHANNEL_ID'),
+  membershipsLogsChannelId: requireProcessEnv(
+    'DISCORD_MEMBERSHIPS_LOGS_CHANNEL_ID',
+  ),
   discordSeniorStaffRoleId: requireProcessEnv('DISCORD_SENIOR_STAFF_ROLE_ID'),
   discordFounderRoleId: requireProcessEnv('DISCORD_FOUNDER_ROLE_ID'),
-  env: process.env.NODE_ENV || 'development'
+  env: process.env.NODE_ENV || 'development',
 };
 
 export default config;

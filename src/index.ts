@@ -1,4 +1,10 @@
-import { Client, Events, ButtonInteraction, ChatInputCommandInteraction, type Interaction } from 'discord.js';
+import {
+  ButtonInteraction,
+  ChatInputCommandInteraction,
+  Client,
+  Events,
+  type Interaction,
+} from 'discord.js';
 import { Intents } from './gatewayIntentBits/index.ts';
 import { TicketManager } from './tickets/class.ts';
 import { MembershipManager } from './membership/class.ts';
@@ -39,7 +45,9 @@ export class DiscordBot {
     }
   }
 
-  private async handleButtonInteraction(interaction: ButtonInteraction): Promise<void> {
+  private async handleButtonInteraction(
+    interaction: ButtonInteraction,
+  ): Promise<void> {
     if (!interaction.channel?.isTextBased()) return;
 
     switch (interaction.customId) {
@@ -52,7 +60,9 @@ export class DiscordBot {
     }
   }
 
-  private async handleCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+  private async handleCommand(
+    interaction: ChatInputCommandInteraction,
+  ): Promise<void> {
     switch (interaction.commandName) {
       case 'ticket':
         await this.ticketManager?.createTicket(interaction);
