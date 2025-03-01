@@ -48,6 +48,6 @@ jobs:
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: "fabiomusi04-discordbot-39"
+          project: "fabiomusi04-discordbot-59"
           entrypoint: "./src/index.ts"
           root: ""
