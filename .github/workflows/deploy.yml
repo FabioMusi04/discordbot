@@ -54,7 +54,7 @@ jobs:
         run: npm install
 
       - name: Build step
-        run: npm run dev
+        run: deno task dev
 
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
