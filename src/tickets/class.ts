@@ -209,7 +209,7 @@ export class TicketManager {
       });
       const generatingMsg = await logsChannel.send('Generating transcript...');
 
-      const transcript = await createTranscript(channel, {
+      const transcript = await createTranscript(channel as any, {
         limit: -1,
         filename: `transcript-${channel.name}.html`,
       });
@@ -241,7 +241,7 @@ export class TicketManager {
       }
     });
 
-    this.claimedTickets.forEach((userId, channelId) => {
+    this.claimedTickets.forEach((_userId, channelId) => {
       if (channelId === channel.id) {
         this.claimedTickets.delete(channelId);
       }

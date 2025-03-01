@@ -109,7 +109,7 @@ export class MembershipManager {
           timeMs,
         );
       }
-    } catch (error) {
+    } catch (_error) {
       this.logMembershipChange(
         interaction,
         targetUser,

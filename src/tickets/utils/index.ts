@@ -44,7 +44,7 @@ export async function fetchTicketMessage(channel: TextChannel) {
   );
 }
 
-export async function saveTicketsToJson(
+export function saveTicketsToJson(
   activeTickets: Collection<string, string>,
   claimedTickets: Collection<string, string>,
 ) {
