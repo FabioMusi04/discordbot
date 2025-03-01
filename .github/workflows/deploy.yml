@@ -44,18 +44,7 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-
-      - name: Install dependencies
-        run: deno install
-
-      - name: Build step
-        run: deno task start
-
+  
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:

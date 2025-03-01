@@ -1,13 +1,10 @@
 import process from 'node:process';
 
 const requireProcessEnv = (name: string): string => {
-  if (!process.env[name]) {
-    if (Deno.env.get(name) === undefined) {
-      throw new Error('You must set the ' + name + ' environment variable');
-    }
-    return Deno.env.get(name) as string;
+  if (Deno.env.get(name) === undefined) {
+    throw new Error('You must set the ' + name + ' environment variable');
   }
-  return process.env[name] as string;
+  return Deno.env.get(name) as string;
 };
 
 interface Config {
