@@ -5,7 +5,7 @@
     "lint": "deno lint --fix",
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
-    "start": "deno run --allow-env --allow-net --allow-read --allow-write src/index.ts"
+    "start": "deno run --env --allow-env src/index.ts"
   },
   "lint": {
     "include": ["src/"],
