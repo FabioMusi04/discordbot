@@ -10,7 +10,7 @@ const commands = [
 ];
 const rest = new REST().setToken(config.discordToken);
 
-export default async function syncCommands (): Promise<void> {
+export default async function syncCommands(): Promise<void> {
   try {
     console.log('Refreshing slash commands...');
     await rest.put(
