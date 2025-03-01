@@ -1,8 +1,9 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 const addMembershipCommand = new SlashCommandBuilder()
   .setName('m-membership')
   .setDescription('Assign a user the Tester role.')
+  .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
   .addUserOption((option) =>
     option.setName('user')
       .setDescription('The user to assign the role to')
@@ -22,6 +23,7 @@ const addMembershipCommand = new SlashCommandBuilder()
 const removeMembershipCommand = new SlashCommandBuilder()
   .setName('m-unmembership')
   .setDescription('Remove a role from a user.')
+  .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
   .addUserOption((option) =>
     option.setName('user')
       .setDescription('The user to remove the role from')
