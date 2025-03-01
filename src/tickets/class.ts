@@ -33,8 +33,11 @@ export class TicketManager {
 
   constructor(ticketCategoryId: string) {
     this.ticketCategoryId = ticketCategoryId;
+    this.initialize();
+  }
 
-    const { activeTickets, claimedTickets } = loadTicketsFromJson() ||
+  private async initialize() {
+    const { activeTickets, claimedTickets } = await loadTicketsFromJson() ||
       {
         activeTickets: new Collection<string, string>(),
         claimedTickets: new Collection<string, string>(),
@@ -146,7 +149,7 @@ export class TicketManager {
 
       this.activeTickets.set(interaction.user.id, ticketChannel.id);
 
-      saveTicketsToJson(this.activeTickets, this.claimedTickets);
+      await saveTicketsToJson(this.activeTickets, this.claimedTickets);
 
       const embed = createTicketEmbed(reason, robloxUsername, description);
 
@@ -247,7 +250,7 @@ export class TicketManager {
       }
     });
 
-    saveTicketsToJson(this.activeTickets, this.claimedTickets);
+    await saveTicketsToJson(this.activeTickets, this.claimedTickets);
 
     await interaction.editReply({
       content: 'Ticket will be closed in 5 seconds...',
@@ -282,7 +285,7 @@ export class TicketManager {
 
     if (!existingClaimerId) {
       this.claimedTickets.set(channel.id, interaction.user.id);
-      saveTicketsToJson(this.activeTickets, this.claimedTickets);
+      await saveTicketsToJson(this.activeTickets, this.claimedTickets);
 
       await channel.setName(`${channel.name}-c`);
 

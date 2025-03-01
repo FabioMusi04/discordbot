@@ -23,8 +23,8 @@ export class MembershipManager {
   /**
    * Schedules role removals on bot startup.
    */
-  private setupExpiredRoleChecks() {
-    const memberships = loadMemberships();
+  private async setupExpiredRoleChecks() {
+    const memberships = await loadMemberships();
     const now = Date.now();
 
     memberships.forEach((membership) => {
@@ -92,14 +92,14 @@ export class MembershipManager {
         }
 
         const expiresAt = Date.now() + timeMs;
-        const memberships = loadMemberships();
+        const memberships = await loadMemberships();
         memberships.push({
           userId: targetUser.id,
           guildId: targetUser.guild.id,
           expiresAt,
           roleId: role.id,
         });
-        saveMemberships(memberships);
+        await saveMemberships(memberships);
 
         console.log(
           `Scheduling role removal for ${targetUser.id} in ${timeMs}ms`,

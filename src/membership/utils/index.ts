@@ -42,16 +42,18 @@ export function parseDuration(duration: string): number | null {
 /**
  * Loads stored memberships from file.
  */
-export function loadMemberships(): Membership[] {
+export async function loadMemberships(): Promise<Membership[]> {
   if (!fs.existsSync(MEMBERSHIP_FILE)) return [];
-  return JSON.parse(fs.readFileSync(MEMBERSHIP_FILE, 'utf8'));
+  return JSON.parse(await Deno.readTextFile(MEMBERSHIP_FILE));
 }
 
 /**
  * Saves memberships to file.
  */
-export function saveMemberships(memberships: Membership[]): void {
-  fs.writeFileSync(MEMBERSHIP_FILE, JSON.stringify(memberships, null, 2));
+export async function saveMemberships(
+  memberships: Membership[],
+): Promise<void> {
+  await Deno.writeTextFile(MEMBERSHIP_FILE, JSON.stringify(memberships));
 }
 
 /**
@@ -117,7 +119,7 @@ export async function removeRole(
 
     hasToLog && logRoleChange(guild, userId, roleId, 'removed', true);
 
-    const memberships = loadMemberships().filter((m) =>
+    const memberships = (await loadMemberships()).filter((m) =>
       !(m.userId === userId && m.roleId === roleId)
     );
     saveMemberships(memberships);
@@ -139,7 +141,7 @@ export async function removeRole(
  * Checks expired roles and removes them when needed.
  */
 export async function checkExpiredRoles(client: Client): Promise<void> {
-  const memberships = loadMemberships();
+  const memberships = await loadMemberships();
   const now = Date.now();
 
   for (const membership of memberships) {

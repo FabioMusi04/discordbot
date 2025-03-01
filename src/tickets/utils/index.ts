@@ -44,7 +44,7 @@ export async function fetchTicketMessage(channel: TextChannel) {
   );
 }
 
-export function saveTicketsToJson(
+export async function saveTicketsToJson(
   activeTickets: Collection<string, string>,
   claimedTickets: Collection<string, string>,
 ) {
@@ -53,17 +53,19 @@ export function saveTicketsToJson(
     claimedTickets: Object.fromEntries(claimedTickets),
   };
 
-  fs.writeFileSync(TICKETS_FILE, JSON.stringify(data, null, 2));
+  await Deno.writeTextFile(TICKETS_FILE, JSON.stringify(data));
 }
 
-export function loadTicketsFromJson(): {
-  activeTickets: Collection<string, string>;
-  claimedTickets: Collection<string, string>;
-} | undefined {
+export async function loadTicketsFromJson(): Promise<
+  {
+    activeTickets: Collection<string, string>;
+    claimedTickets: Collection<string, string>;
+  } | undefined
+> {
   if (!fs.existsSync(TICKETS_FILE)) return;
 
   try {
-    const data = JSON.parse(fs.readFileSync(TICKETS_FILE, 'utf-8'));
+    const data = JSON.parse(await Deno.readTextFile(TICKETS_FILE));
     const activeTickets = new Collection<string, string>(
       Object.entries(data.activeTickets || {}),
     );
