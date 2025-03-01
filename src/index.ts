@@ -1,3 +1,7 @@
+import syncCommands from './commands/index.ts';
+
+await syncCommands();
+
 import {
   ButtonInteraction,
   ChatInputCommandInteraction,
