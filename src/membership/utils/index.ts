@@ -69,7 +69,6 @@ export async function saveMemberships(
 ) {
   const kv = await DataBase.getInstance();
   await kv.set(['memberships'], memberships);
-  console.log(await kv.get(['memberships']));
 }
 
 /**
@@ -136,10 +135,8 @@ export async function removeRole(
     hasToLog && logRoleChange(guild, userId, roleId, 'removed', true);
 
     const memberships = ((await loadMemberships()).values()).filter((m) => {
-      console.log(m);
       return !(m.userId === userId && m.roleId === roleId);
     });
-    console.log('Removing role:', memberships);
     await saveMemberships(
       new Collection(memberships.map((m) => [m.userId, m])),
     );
@@ -163,12 +160,9 @@ export async function removeRole(
 export async function checkExpiredRoles(client: Client): Promise<void> {
   await saveMemberships(new Collection<string, Membership>());
   const memberships = await loadMemberships();
-  console.log('Checking expired roles:', memberships.size);
   if (!memberships.size || memberships.size <= 1) return;
   const now = Date.now();
-  console.log(memberships);
   for (const membership of memberships.values()) {
-    console.log('Checking membership:', membership);
     if (membership.expiresAt && membership.expiresAt < now) {
       const guild = client.guilds.cache.get(membership.guildId);
       if (guild) await removeRole(guild, membership.userId, membership.roleId);
