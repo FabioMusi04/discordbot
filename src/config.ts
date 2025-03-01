@@ -1,4 +1,4 @@
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from 'node:url';
 
 import * as path from 'node:path';
 import dotenv from 'dotenv-safe';
