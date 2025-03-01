@@ -54,7 +54,7 @@ jobs:
         run: deno install
 
       - name: Build step
-        run: deno task dev
+        run: deno task start
 
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
